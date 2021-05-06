@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "outDir": "dist",
+    "module": "amd",
+    "outFile": "dist/index.js",
     "allowJs": true,
     "target": "es5"
   },

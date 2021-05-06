@@ -5,135 +5,95 @@ type Cell = {
   alive: boolean
 }
 
-type GOLOptions = {
+type BoardOptions = {
   periodic: boolean
+  rows: number
+  columns: number
+}
+
+type Board = {
+  options: BoardOptions
+  cells: Cell[][]
 }
 
 const container = document.getElementById("gol");
 
-var numRows: number = 6
-var numCols: number = 6
-
-var cells: Cell[][] = []
-var cellsNext: Cell[][] = []
-
-function setAlive(cell: Cell) {
-  cell.alive = true
-  var cellElem = document.getElementById(`${cell.id}`)
-  cellElem.style.background = "blueviolet"
-}
-
-function setDead(cell: Cell) {
-  cell.alive = false
-  var cellElem = document.getElementById(`${cell.id}`)
-  cellElem.style.background = "white"
-}
-
 function getCellFromID(id: number): Cell {
-  return cells[Math.floor(id / numCols)][id % numCols]
+  return gol.cells[Math.floor(id / gol.options.columns)][id % gol.options.columns]
 }
 
 function cellClick(e: any) {
   var cell = getCellFromID(e.target.id)
 
-  if (cell.alive) {
-    setDead(cell)
-  } else {
-    setAlive(cell)
-  }
+  // Flip the state of the cell
+  cell.alive = (cell.alive) ? false : true
+  drawCell(cell)
 }
 
-function getCellStatus(row: number, col: number, periodic: boolean) {
+function getIndex(index: number, max: number, periodic: boolean): number {
+  if (gol.options.periodic) {
+
+    if (index < 0) {
+      return max - 1
+    } else if (index == max) {
+      return 0
+    }
+
+  } else {
+    if (index < 0 || index == max) return 0
+  }
+
+  return index
+} 
+
+function countAliveNeighbors(cell: Cell, board: Board): number {
   var numAlive = 0
-  var alive = false
-  let currCell = cells[row][col]
 
-  for (var r = row - 1; r <= row + 1; r++) {
-    for (var c = col - 1; c <= col + 1; c++) {
+  for (var r = cell.row - 1; r <= cell.row + 1; r++) {
+    for (var c = cell.col - 1; c <= cell.col + 1; c++) {
 
-      if (r == row && c == col) {
+      if (r == cell.row && c == cell.col) {
         continue
       } else {
-        var rowIndex = 0
-        var colIndex = 0
-
-        if (r < 0) {
-          rowIndex = numRows - 1
-        } else if (r == numRows) {
-          rowIndex = 0
-        } else {
-          rowIndex = r
+        if (gol.options.periodic) {
+          let rowIndex = getIndex(r, board.options.rows, board.options.periodic)
+          let colIndex = getIndex(c, board.options.columns, board.options.periodic)
+          if (gol.cells[rowIndex][colIndex].alive) numAlive++
         }
-
-        if (c < 0) {
-          colIndex = numCols - 1
-        } else if (c == numCols) {
-          colIndex = 0
-        } else {
-          colIndex = c
-        }
-
-        if (cells[rowIndex][colIndex].alive) numAlive++
-
       }
-
     }
   } 
 
-  // var numa = 0
-  // cells.map(row => row.map(cell => {
-  //   if (cell.alive) numa++
-  // }))
-  // console.log(cells, numa)
-  // console.log(`cell ${currCell.id + 1} num alive ${numAlive}`)
+  return numAlive
+}
 
+function isCellAlive(cell: Cell, board: Board): boolean {
+  var alive = false
 
-  if (currCell.alive && (numAlive == 2 || numAlive == 3) ) {
+  let numAlive = countAliveNeighbors(cell, board)
+
+  if (cell.alive && (numAlive == 2 || numAlive == 3) ) {
     alive = true
-  } else if (!currCell.alive && numAlive == 3) {
+  } else if (!cell.alive && numAlive == 3) {
     alive = true
   }
 
   return alive 
 }
 
-function run(options: GOLOptions) {
-
-  for (var r = 0; r < numRows; r++) {
-    let row = cells[r]
-
-    for (var c = 0; c < numCols; c++) {
-      var cell = row[c]
-      var cellNext = cellsNext[r][c]
-
-      let alive = getCellStatus(r, c, options.periodic)
-
-      if (alive) {
-        setAlive(cellNext)
-      } else {
-        setDead(cellNext)
-      }
-
-    }
-  }
-
-  cells = deepCopy(cellsNext)
-
-}
-
 // https://stackoverflow.com/questions/57550082/creating-a-16x16-grid-using-javascript
-function makeRows(rows: number, cols: number): Cell[][] {
+function initBoard(options: BoardOptions): Board {
   var cells = []
 
-  container.style.setProperty('--grid-rows', `${rows}`);
-  container.style.setProperty('--grid-cols', `${cols}`);
+  container.style.setProperty('--grid-rows', `${options.rows}`);
+  container.style.setProperty('--grid-cols', `${options.columns}`);
 
-  for (var row = 0; row < rows; row++) {
+  for (var row = 0; row < options.rows; row++) {
     var rowArr: Cell[] = []
-    for (var col = 0; col < cols; col++) {
+    for (var col = 0; col < options.columns; col++) {
       var cellElem = document.createElement("div");
 
-      let num = (row * cols) + col
+      let num = (row * options.columns) + col
       let cell: Cell = {id: num, row: row, col: col, alive: false}
 
       cellElem.innerText = `${(cell.id + 1)}`;
@@ -148,14 +108,43 @@ function makeRows(rows: number, cols: number): Cell[][] {
     cells.push(rowArr)
   }
 
-  return cells
+  return {options: options, cells: cells}
+}
+
+function step(board: Board): Board {
+  var newBoard = deepCopy(board)
+
+  for (var r = 0; r < board.options.rows; r++) {
+    for (var c = 0; c < board.options.columns; c++) {
+      var cell = newBoard.cells[r][c]
+
+      cell.alive = isCellAlive(cell, board)
+    }
+  }
+
+  return newBoard
+}
+
+function drawCell(cell: Cell) {
+  var cellElem = document.getElementById(`${cell.id}`)
+  cellElem.style.background = (cell.alive) ? "blueviolet" : "white"
+}
+
+function draw(board: Board) {
+  board.cells.map(row => row.map(cell => {
+    drawCell(cell)
+  }))
+}
+
+function stepDraw() {
+  gol = step(gol)
+  draw(gol)
 }
 
 function deepCopy(c: any): any {
   return JSON.parse(JSON.stringify(c))
 }
 
-document.getElementById("step").addEventListener("click", () => run({periodic: true}))
-
-cells = makeRows(numRows, numCols);
-cellsNext = deepCopy(cells)
+// Setup the page for the first time
+document.getElementById("step").addEventListener("click", () => stepDraw())
+var gol = initBoard({rows: 15, columns: 15, periodic: true})

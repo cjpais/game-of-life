@@ -39,6 +39,10 @@ function countAliveNeighbors(cell: Cell, board: Board): number {
           let rowIndex = getIndex(r, board.options.rows, board.options.periodic)
           let colIndex = getIndex(c, board.options.columns, board.options.periodic)
           if (board.cells[rowIndex][colIndex].alive) numAlive++
+
+          // Alternatively can do
+          // rowIndex = (r + board.options.rows) % board.options.rows
+          // colIndex = (r + board.options.columns) % board.options.columns
         }
       }
     }

@@ -40,9 +40,9 @@ function countAliveNeighbors(cell: Cell, board: Board): number {
           let colIndex = getIndex(c, board.options.columns, board.options.periodic)
           if (board.cells[rowIndex][colIndex].alive) numAlive++
 
-          // Alternatively can do
-          // rowIndex = (r + board.options.rows) % board.options.rows
-          // colIndex = (r + board.options.columns) % board.options.columns
+          // Alternatively can do. TODO this is wrong. Come back after IPFS deploy
+          // let rowIndex = (r + board.options.rows) % board.options.rows
+          // let colIndex = (c + board.options.columns) % board.options.columns
         }
       }
     }
